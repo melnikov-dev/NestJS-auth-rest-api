@@ -1,0 +1,21 @@
+services:
+  prisma-postgres:
+    container_name: nestjs-prisma-postgres
+    image: postgres:18
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - '${DB_PORT}:5432'
+    volumes:
+      - prisma_postgres_data:/var/lib/postgresql
+    networks:
+      - nestjs-auth
+volumes:
+  typeorm_postgres_data:
+  prisma_postgres_data:
+
+networks:
+  nestjs-auth:
