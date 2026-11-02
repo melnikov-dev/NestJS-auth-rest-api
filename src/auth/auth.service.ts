@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RegisterRequestDto } from './dto/register.dto.js';
 import { hash, verify } from 'argon2';
@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { JwtPayload } from './interfaces/jwt.interface.js';
 import { LoginRequestDto } from './dto/login.dto.js';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { isDev } from '../utils/is-dev.util.js';
 import { ttlToMs } from '../utils/ttl-to-ms.util.js';
 
@@ -41,8 +41,8 @@ export class AuthService {
         return { accessToken, refreshToken }
     }
 
-    private setCookie(res: Response, value: string, maxAge: number) {
-        res.cookie('refreshToken', value, {
+    private setCookie(res: Response, cookieName: string, value: string, maxAge: number) {
+        res.cookie(cookieName, value, {
             httpOnly: true,
             domain: this.COOKIE_DOMAIN,
             maxAge: maxAge,
@@ -51,12 +51,23 @@ export class AuthService {
         })
     }
 
+    private clearCookie(res: Response, name: string) {
+        res.clearCookie(name, {
+            httpOnly: true,
+            domain: this.COOKIE_DOMAIN,
+            secure: !isDev(this.configService),
+            sameSite: isDev(this.configService) ? 'none' : 'lax',
+        });
+    }
+
     private auth(res: Response, id: string) {
         const { accessToken, refreshToken } = this.generateTokens(id);
-        const maxAge = ttlToMs(this.JWT_REFRESH_TOKEN_TTL);
+        const maxAge: number = ttlToMs(this.JWT_REFRESH_TOKEN_TTL);
+        const cookieName: string = 'refreshToken';
 
         this.setCookie(
             res,
+            cookieName,
             refreshToken,
             maxAge,
         )
@@ -101,6 +112,40 @@ export class AuthService {
         const isValidPassword: boolean = await verify(user.password, password);
         if (!isValidPassword) {
             throw new UnauthorizedException('Invalid email or password');
+        }
+
+        return this.auth(res, user.id)
+    }
+
+    async logout(res: Response) {
+        this.clearCookie(res, 'refreshToken');
+        return true
+    }
+
+    async refresh(req: Request, res: Response) {
+        const refreshToken = req.cookies['refreshToken'];
+
+        if (!refreshToken) {
+            throw new UnauthorizedException('Invalid refresh token')
+        }
+
+        const payload: JwtPayload = await this.jwtService.verifyAsync(refreshToken);
+
+        if (!payload) {
+            throw new UnauthorizedException('Invalid payload in refresh token')
+        }
+
+        const user = await this.prismaService.user.findUnique({
+            where: {
+                id: payload.id
+            },
+            select: {
+                id: true
+            }
+        })
+
+        if (!user) {
+            throw new NotFoundException('User not found')
         }
 
         return this.auth(res, user.id)
