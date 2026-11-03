@@ -1,10 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { RegisterRequestDto } from './dto/register.dto.js';
 import { LoginRequestDto } from './dto/login.dto.js';
 import type { Request, Response } from 'express';
 import { ApiBadRequestResponse, ApiConflictResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { AuthResponseDto } from './dto/auth-response.dto.js';
+import { Authorization } from './decorators/authorization.decorator.js';
 
 @Controller('auth')
 export class AuthController {
@@ -56,5 +57,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Res({ passthrough: true }) res: Response) {
     return await this.authService.logout(res);
+  }
+
+  @Authorization()
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  async me(@Req() req: Request) {
+    return req.user; // ??? откуда он в req взялся?
   }
 }

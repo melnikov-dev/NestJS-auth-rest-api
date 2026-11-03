@@ -122,6 +122,16 @@ export class AuthService {
         return true
     }
 
+    async validate(id: string) {
+        const user = await this.prismaService.user.findUnique({ where: { id } })
+
+        if (!user) {
+            throw new NotFoundException('User not found')
+        }
+
+        return user
+    }
+
     async refresh(req: Request, res: Response) {
         const refreshToken = req.cookies['refreshToken'];
 
