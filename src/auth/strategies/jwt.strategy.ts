@@ -11,7 +11,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         private readonly authService: AuthService,
         private readonly configService: ConfigService
     ) {
-        super({ // ??? super ?
+        super({ // вызов конструктора родительского класса PassportStrategy
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
@@ -19,7 +19,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         })
     }
 
-    // ??? зачем?
+    // NestJS ожидает метод с названием validate, чтобы под капотом в Passport вызвать verify callback
+    // Passport под капотом кладет в req.user результат вызова validate
     async validate(payload: JwtPayload) {
         return await this.authService.validate(payload.id);
     }

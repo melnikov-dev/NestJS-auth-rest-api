@@ -63,6 +63,6 @@ export class AuthController {
   @Get('me')
   @HttpCode(HttpStatus.OK)
   async me(@Req() req: Request) {
-    return req.user; // ??? откуда он в req взялся?
+    return req.user;
   }
 }

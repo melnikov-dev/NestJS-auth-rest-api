@@ -9,7 +9,7 @@ import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
-    PassportModule, // ??? зачем?
+    PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: getJwtConfig,
